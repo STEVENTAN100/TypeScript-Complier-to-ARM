@@ -1,4 +1,47 @@
 let emit = console.log;
+let test = (name: string, callback: () => void) => callback();
+//实现解析器的接口，T可以理解为AST
+interface Parser<T> {
+    //显式声明返回null，可激活严格null类型检查
+    parse(source: Source): ParseResult<T> | null;
+}
+class ParseResult<T> {
+    //source指明了parser离开的位置，以便下一个parser介入
+    constructor(public value: T, public source: Source) { }
+}
+class Source {
+    //追踪正在解析的字符串和正在匹配的字符串的位置
+    constructor(public string: string,
+        public index: number) { }
+    match(regexp: RegExp): (ParseResult<string> | null) {
+        console.assert(regexp['sticky']);
+        regexp.lastIndex = this.index;
+        let match = this.string.match(regexp);
+        //console.log('matching', regexp, 'at index', this.index,
+        //            'gave', match && JSON.stringify(match[0]));
+        if (match) {
+            let value = match[0];
+            //更新正在匹配的位置
+            let source = new Source(this.string, this.index + value.length);
+            return new ParseResult(value, source);
+        }
+        return null;
+    }
+}
+test("Source matching is idempotent", () => {
+    let s = new Source('  let', 2);
+    let result1 = s.match(/let/y);
+    console.assert(result1 !== null && result1.value === 'let');
+    console.assert(result1 !== null && result1.source.index == 5);
+    let result2 = s.match(/let/y);
+    console.assert(result2 !== null && result2.value === 'let');
+    console.assert(result2 !== null && result2.source.index == 5);
+});
+//解析器的自然实现
+class Parser<T> {
+    //构造器参数就是parse方法
+    constructor(public parse: (s: Source) => (ParseResult<T> | null)) { }
+}
 
 //实现AST抽象语法树接口，指明类要实现的方法
 interface AST {
