@@ -64,7 +64,6 @@ class Parser<T> {
                 return parser.parse(source);
         });
     }
-
 }
 
 //实现AST抽象语法树接口，指明类要实现的方法
