@@ -41,6 +41,30 @@ test("Source matching is idempotent", () => {
 class Parser<T> {
     //构造器参数就是parse方法
     constructor(public parse: (s: Source) => (ParseResult<T> | null)) { }
+    /* Primitive combinators */
+    static regexp(regexp: RegExp): Parser<string> {
+        return new Parser(source => source.match(regexp));
+    }
+    //The notation does not concern itself with what value is produced,
+    //only with what string is recognized.
+    static constant<U>(value: U): Parser<U> {
+        return new Parser(source => new ParseResult(value, source));
+    }
+    static error<U>(message: string): Parser<U> {
+        return new Parser(source => { throw Error(message) });
+        // return new Parser(source => { throw Error(source.string.slice(source.index)) });
+    }
+    //即prioritized选择运算，和unordered选择运算相对，因为从左到右解析
+    or(parser: Parser<T>): Parser<T> {
+        return new Parser((source) => {
+            let result = this.parse(source);
+            if (result)
+                return result;
+            else
+                return parser.parse(source);
+        });
+    }
+
 }
 
 //实现AST抽象语法树接口，指明类要实现的方法
