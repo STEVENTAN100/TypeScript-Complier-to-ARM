@@ -66,11 +66,11 @@ class Parser<T> {
                 return parser.parse(source);
         });
     }
-    //实现正则表达式*运算，extends never是解决错误用的
-    static zeroOrMore<U extends never>(parser: Parser<U>): Parser<Array<U>> {
+    //实现正则表达式*运算
+    static zeroOrMore<U>(parser: Parser<U>): Parser<Array<U>> {
         return new Parser(source => {
-            let results = [];
-            let item: (ParseResult<U> | null);
+            let results: Array<any> = [];
+            let item;
             while (item = parser.parse(source)) {
                 source = item.source;
                 results.push(item.value);
@@ -129,7 +129,11 @@ test("Parsing with bindings", () => {
 });
 
 //First Pass
-//TODO
+//whitespace and comments
+let whitespace = regexp(/[ \n\t\r]+/y);
+//.表示任意字符，除了换行，s则表示可以换行，因而实现多行注释
+let comments = regexp(/[/][/].*/y).or(regexp(/[/][*].*[*][/]/sy));
+let ignored = zeroOrMore(whitespace.or(comments));
 
 //实现AST抽象语法树接口，指明类要实现的方法
 interface AST {
