@@ -1,5 +1,6 @@
 let emit = console.log;
 let test = (name: string, callback: () => void) => callback();
+
 //实现解析器的接口，T可以理解为AST
 interface Parser<T> {
     //显式声明返回null，可激活严格null类型检查
@@ -37,6 +38,7 @@ test("Source matching is idempotent", () => {
     console.assert(result2 !== null && result2.value === 'let');
     console.assert(result2 !== null && result2.source.index == 5);
 });
+
 //解析器的自然实现
 class Parser<T> {
     //构造器参数就是parse方法
@@ -93,11 +95,11 @@ class Parser<T> {
     }
     //binding name only to return a constant parser immediately
     map<U>(callback: (t: T) => U): Parser<U> {
-        return this.bind((value) => Parser.constant(callback(value)));
+        return this.bind((value) => constant(callback(value)));
     }
     //实现正则表达式?运算
     static maybe<U>(parser: Parser<U | null>): Parser<U | null> {
-        return parser.or(Parser.constant(null));
+        return parser.or(constant(null));
     }
     //一个helper方法，接受字符串作为参数
     parseStringToCompletion(string: string): T {
@@ -111,6 +113,23 @@ class Parser<T> {
         return result.value;
     }
 }
+let { regexp, constant, maybe, zeroOrMore, error } = Parser;
+//一些测试
+test("Parsing alternatives with `or`", () => {
+    let parser = regexp(/bye/y).or(regexp(/hai/y));
+    let result = parser.parseStringToCompletion('hai');
+    console.assert(result == 'hai');
+});
+test("Parsing with bindings", () => {
+    let parser = regexp(/[a-z]+/y).bind((word) =>
+        regexp(/[0-9]+/y).bind((digits) =>
+            constant(`first ${word}, then ${digits}`)));
+    let result = parser.parseStringToCompletion('hai123');
+    console.assert(result == 'first hai, then 123');
+});
+
+//First Pass
+//TODO
 
 //实现AST抽象语法树接口，指明类要实现的方法
 interface AST {
