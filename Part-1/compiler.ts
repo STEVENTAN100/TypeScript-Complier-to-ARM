@@ -64,6 +64,52 @@ class Parser<T> {
                 return parser.parse(source);
         });
     }
+    //实现正则表达式*运算，extends never是解决错误用的
+    static zeroOrMore<U extends never>(parser: Parser<U>): Parser<Array<U>> {
+        return new Parser(source => {
+            let results = [];
+            let item: (ParseResult<U> | null);
+            while (item = parser.parse(source)) {
+                source = item.source;
+                results.push(item.value);
+            }
+            return new ParseResult(results, source);
+        });
+    }
+    //实现值和名字的绑定，很有趣的方法！
+    bind<U>(callback: (t: T) => Parser<U>): Parser<U> {
+        return new Parser((source) => {
+            let result = this.parse(source);
+            if (result)
+                return callback(result.value).parse(result.source);
+            else
+                return null;
+        });
+    }
+    /* Non-primitive, composite combinators */
+    //like bind，但不绑定名字
+    and<U>(parser: Parser<U>): Parser<U> {
+        return this.bind((_) => parser);
+    }
+    //binding name only to return a constant parser immediately
+    map<U>(callback: (t: T) => U): Parser<U> {
+        return this.bind((value) => Parser.constant(callback(value)));
+    }
+    //实现正则表达式?运算
+    static maybe<U>(parser: Parser<U | null>): Parser<U | null> {
+        return parser.or(Parser.constant(null));
+    }
+    //一个helper方法，接受字符串作为参数
+    parseStringToCompletion(string: string): T {
+        let source = new Source(string, 0);
+        let result = this.parse(source);
+        if (!result)
+            throw Error("Parse error: could not parse anything at all");
+        let index = result.source.index;
+        if (index != result.source.string.length)
+            throw Error("Parse error at index " + index);
+        return result.value;
+    }
 }
 
 //实现AST抽象语法树接口，指明类要实现的方法
